@@ -152,10 +152,14 @@ data generator if the CSV is missing so the `.Rmd` knits on a fresh clone.
 
 | # | Check | Method | Result / action |
 |---|-------|--------|-----------------|
-| 1 | README renders correctly | GitHub file preview | Headers, tables, code blocks, badges and ToC links render |
-| 2 | `.Rmd` knits without errors | RStudio → *Knit to HTML* | All chunks run; ToC, tables and Figure 1 render |
-| 3 | Chunk code matches script | Side-by-side comparison with `R/sales_summary.R` | Identical logic |
-| 4 | Summary logic is correct | Manual review of `summarise()` | Ensured `avg_order_value` uses per-order `revenue`, not the total |
-| 5 | Results not computed by AI | All numbers produced by R at knit time (inline R) | No hard-coded figures |
-| 6 | Privacy | Data review | Synthetic data only |
-| 7 | Repository hygiene | `.gitignore` for generated files | Only source and documentation files committed |
+| 1 | GitHub copies match local files | SHA-256 checksum of all 8 files | All identical |
+| 2 | README renders correctly | GitHub file preview | 11 sections, 3 tables, 5 code blocks, 3 badges render; all ToC anchor links resolve |
+| 3 | README placeholder | Manual review | Replaced `<your-username>` with my GitHub username |
+| 4 | `.Rmd` knits on a fresh copy | Posit Cloud project created from the GitHub repo (R 4.6.2) → `rmarkdown::render()` | `sales_summary.html` created; 0 chunk errors; 11 tables, 13 sections, Figure 1 embedded |
+| 5 | Scripts produce documented outputs | Ran both scripts in Posit Cloud | 3 files created in `output/` |
+| 6 | Cleaning step | Row count before/after | 18 rows removed (3 % of 600), as designed |
+| 7 | Chunk code matches script | Side-by-side comparison with `R/sales_summary.R` | Identical logic |
+| 8 | Summary logic is correct | Manual review of `summarise()` | `avg_order_value` uses per-order `revenue`, not the total |
+| 9 | Results not computed by AI | All numbers produced by R at knit time (inline R) | No hard-coded figures |
+| 10 | Privacy | Data review | Synthetic data only |
+| 11 | Repository hygiene | `.gitignore` for generated files | Only source and documentation files committed |
