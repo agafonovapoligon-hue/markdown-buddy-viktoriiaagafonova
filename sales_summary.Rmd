@@ -1,0 +1,217 @@
+---
+title: "Sales Summary Script — Documentation"
+subtitle: "Documents `R/sales_summary.R`"
+author: "Viktoriia Agafonova"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: flatly
+    highlight: tango
+    code_folding: show
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 4.5
+)
+```
+
+> **AI Assistance Declaration:** I used Claude (Anthropic, Claude Opus 5.5, Claude desktop app, 2026-11-18) for suggesting R Markdown structure, formatting, and code-block layout. Prompts used: *"Here's my R script description. Suggest Markdown formatting and code block examples."*; *"Add syntax highlighting and improve section organization (e.g., # Purpose, ## Inputs, ## Outputs)."*; *"Is the Markdown consistent with RMarkdown best practices?"* (full log in `AI_Appendix.md`). I verified outputs using RStudio *Knit to HTML*, a check that every header, table and chunk renders, and a manual comparison of chunk code with `R/sales_summary.R`. All final calculations are done by myself. I am responsible for the accuracy and originality of this work.
+
+# Purpose
+
+`R/sales_summary.R` turns a raw, **synthetic** retail sales file into two
+business-ready summaries:
+
+1. **Revenue by region** — orders, units, total revenue and average order value.
+2. **Revenue by month** — a monthly trend table and line chart.
+
+The script is the core analysis step of the *markdown-buddy* project. This
+document explains *what* it does, *what it needs*, and *what it produces*, and
+re-runs every step so the results below are always generated from the code.
+
+## Inputs
+
+| Item | Location | Description |
+|------|----------|-------------|
+| Sales data | `data/synthetic_sales.csv` | 600 synthetic orders created by `R/generate_synthetic_data.R` (seed `400`). |
+
+**Data dictionary**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `order_id` | character | Unique order identifier (`ORD-0001` …). |
+| `order_date` | date | Order date in 2025 (`YYYY-MM-DD`). |
+| `region` | character | Sales region: North, South, East, West. |
+| `product` | character | Laptop, Monitor, Keyboard or Headset. |
+| `units` | integer | Units sold (1–10); ~3 % intentionally missing. |
+| `unit_price` | numeric | Price per unit in USD. |
+
+## Dependencies
+
+| Package | Role |
+|---------|------|
+| `readr` | Fast, typed CSV import/export |
+| `dplyr` | Filtering, mutating and grouped summaries |
+| `ggplot2` | Monthly revenue chart (needs ≥ 3.4 for `linewidth`) |
+| `knitr` | Rendering tables in this document |
+
+R ≥ 4.1 is required for the native pipe `|>`.
+
+```{r libraries}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+# Workflow
+
+## Step 1 — Load the data
+
+If the CSV does not exist yet, the generator script is sourced first, so this
+document can be knitted on a fresh clone.
+
+```{r load-data}
+input_path <- "data/synthetic_sales.csv"
+
+if (!file.exists(input_path)) {
+  source("R/generate_synthetic_data.R")
+}
+
+sales_raw <- read_csv(input_path, show_col_types = FALSE)
+glimpse(sales_raw)
+```
+
+## Step 2 — Clean and derive variables
+
+Rows with a missing `units` value are removed, then two variables are derived:
+
+- `revenue` = `units` × `unit_price`
+- `month` = year-month key (`YYYY-MM`) used for the trend
+
+```{r clean-data}
+sales <- sales_raw |>
+  filter(!is.na(units)) |>
+  mutate(
+    revenue = units * unit_price,
+    month   = format(order_date, "%Y-%m")
+  )
+```
+
+The raw file contains **`r nrow(sales_raw)`** rows; after cleaning,
+**`r nrow(sales)`** rows remain (**`r nrow(sales_raw) - nrow(sales)`** removed).
+
+## Step 3 — Summarise revenue by region
+
+```{r region-summary}
+region_summary <- sales |>
+  group_by(region) |>
+  summarise(
+    orders          = n(),
+    total_units     = sum(units),
+    total_revenue   = sum(revenue),
+    avg_order_value = mean(revenue),
+    .groups = "drop"
+  ) |>
+  arrange(desc(total_revenue))
+
+knitr::kable(
+  region_summary,
+  digits    = 2,
+  format.args = list(big.mark = ","),
+  col.names = c("Region", "Orders", "Units", "Total revenue ($)", "Avg order value ($)"),
+  caption   = "Table 1. Revenue by region (sorted by total revenue)"
+)
+```
+
+## Step 4 — Summarise revenue by month
+
+```{r monthly-summary}
+monthly_revenue <- sales |>
+  group_by(month) |>
+  summarise(total_revenue = sum(revenue), .groups = "drop") |>
+  arrange(month)
+
+knitr::kable(
+  monthly_revenue,
+  digits    = 2,
+  format.args = list(big.mark = ","),
+  col.names = c("Month", "Total revenue ($)"),
+  caption   = "Table 2. Monthly revenue"
+)
+```
+
+## Step 5 — Visualise the monthly trend
+
+```{r monthly-plot, fig.cap = "Figure 1. Monthly revenue, synthetic data (2025)"}
+revenue_plot <- ggplot(monthly_revenue,
+                       aes(x = month, y = total_revenue, group = 1)) +
+  geom_line(colour = "#2C7FB8", linewidth = 1) +
+  geom_point(colour = "#2C7FB8", size = 2) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(title = "Monthly revenue (synthetic data, 2025)",
+       x = "Month", y = "Revenue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+revenue_plot
+```
+
+## Outputs
+
+Running `R/sales_summary.R` writes three files to `output/`:
+
+| File | Content |
+|------|---------|
+| `output/region_summary.csv` | Table 1 — revenue by region |
+| `output/monthly_revenue.csv` | Table 2 — revenue by month |
+| `output/monthly_revenue.png` | Figure 1 — monthly revenue chart |
+
+The equivalent save step is shown below (not executed while knitting, so
+rendering the document never overwrites files):
+
+```{r save-outputs, eval = FALSE}
+dir.create("output", showWarnings = FALSE)
+write_csv(region_summary,  "output/region_summary.csv")
+write_csv(monthly_revenue, "output/monthly_revenue.csv")
+ggsave("output/monthly_revenue.png", revenue_plot,
+       width = 8, height = 4.5, dpi = 150)
+```
+
+# How to Run
+
+From the project root in RStudio or Posit Cloud:
+
+```{r how-to-run, eval = FALSE}
+# 1. Install dependencies (once)
+install.packages(c("readr", "dplyr", "ggplot2", "rmarkdown"))
+
+# 2. Create the synthetic data and run the analysis
+source("R/generate_synthetic_data.R")
+source("R/sales_summary.R")
+
+# 3. Re-build this document
+rmarkdown::render("sales_summary.Rmd")
+```
+
+# Assumptions and Limitations
+
+- The data are **synthetic** and exist only to demonstrate the workflow; results
+  carry no business meaning.
+- Rows with missing `units` are **dropped**, not imputed. With ~3 % missing this
+  has little effect, but a real project should justify the choice.
+- Revenue ignores discounts, returns and taxes.
+
+# Session Information
+
+```{r session-info}
+sessionInfo()
+```
