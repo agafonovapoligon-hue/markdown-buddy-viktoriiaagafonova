@@ -1,6 +1,6 @@
 # Reflection — Markdown Buddy (BDA400, Assignment 1)
 
-> **AI Assistance Declaration:** I used Claude (Anthropic, Claude Opus 5.5, Claude desktop app, 2026-11-18) for drafting and structuring the README, R Markdown file and this reflection. Prompts used: see [`AI_Appendix.md`](AI_Appendix.md). I verified outputs using GitHub's Markdown preview, RStudio *Knit to HTML*, and a manual review against the assignment rubric. All final calculations are done by myself. I am responsible for the accuracy and originality of this work.
+> **AI Assistance Declaration:** I used Claude (Anthropic, Claude Opus 5.5, Claude desktop app, 2026-11-18) for drafting and structuring the README, R Markdown file and this reflection. Prompts used: see [`AI_Appendix.md`](AI_Appendix.md). I verified outputs using GitHub's Markdown preview, knitting the `.Rmd` in Posit Cloud, a file-by-file comparison of the GitHub copies with my local files, and a manual review against the assignment rubric. All final calculations are done by myself. I am responsible for the accuracy and originality of this work.
 
 **Author:** Viktoriia Agafonova · **Course:** BDA400 — Data Science Tools and Techniques
 
@@ -10,64 +10,76 @@
 
 **Where it helped**
 
-- **Speed and structure.** The seed prompt produced a complete README skeleton
-  (Overview, Installation, Usage, Example Code, License) in seconds. Starting
-  from a structured outline is much faster than starting from a blank page.
-- **Markdown conventions.** It reminded me of details I tend to forget: language
-  tags on fenced code blocks, a table of contents with anchor links, badges, and
-  tables for data dictionaries.
-- **R Markdown best practices.** It suggested a `setup` chunk with global
-  `knitr` options, named chunks, `toc_float`, and `eval = FALSE` for code that
-  should be shown but not run (e.g., saving files or installing packages).
+- **Speed and structure.** Working from the assignment instructions, Claude
+  produced a complete first version of every deliverable — README outline,
+  README, R scripts, R Markdown file and prompt log — in one session. Starting
+  from a structured draft is much faster than starting from a blank page.
+- **Learning by example.** The drafts showed me what professional
+  documentation looks like: a table of contents with anchor links, a project
+  structure tree, a data dictionary table, language tags on every code block,
+  and a clear "how to run" order.
+- **R Markdown best practices.** It used a `setup` chunk with global `knitr`
+  options, named chunks, a floating table of contents, inline R for numbers,
+  and `eval = FALSE` for code that should be shown but not executed.
+- **Tool workflow.** R is not installed on my computer, so the AI suggested
+  creating a Posit Cloud project directly from my GitHub repository. This let me
+  knit the `.Rmd` without any local setup.
 
 **Where it fell short**
 
-- **Generic content.** The first README draft described a "typical" R project,
-  not mine. It invented sections I did not need and missed the run order of my
-  scripts. I had to supply concrete facts (file names, columns, outputs).
-- **Version-sensitive code.** Suggested code used the native pipe `|>` and
-  `ggplot2`'s `linewidth` argument without stating that they need R ≥ 4.1 and
-  ggplot2 ≥ 3.4. I added both requirements after checking the documentation.
-- **It cannot see the rendered result.** The AI can check syntax in text, but
-  only the GitHub preview and knitting in RStudio prove that tables, anchors,
-  and code chunks really render.
+- **The text is not automatically "mine".** AI drafts are fluent and generic.
+  A reader cannot tell what I understood unless I review the content and can
+  explain every section myself.
+- **It cannot prove that things work.** The AI can write correct-looking
+  Markdown and R code, but only the GitHub preview and an actual knit show that
+  tables, links and code chunks really render and run.
+- **It can overreach.** The course rules ask for AI as a design assistant, not
+  an answer generator. Because the AI could produce everything at once, I had to
+  make a deliberate effort to stay in control: reviewing, running and checking
+  the work instead of accepting it as finished.
 
 ## 2. What did you verify or change after reviewing the AI's output, and why?
 
-| What I checked | How | Change made |
-|----------------|-----|-------------|
-| README structure | Compared with the tidyverse **dplyr** README | Re-ordered sections to Overview → Installation → Usage, added Project Structure tree |
-| Markdown syntax | GitHub preview of every heading, table, list and link | Added language tags to all code fences; fixed anchor links in the ToC |
-| R code correctness | Read every line and ran the scripts in RStudio | In `summarise()`, renamed `revenue = sum(revenue)` to `total_revenue` so the next line, `mean(revenue)`, still uses the per-order values instead of the new total |
-| Reproducibility of the `.Rmd` | Knitted on a clean session with no `data/` folder | Added a guard that sources the generator if the CSV is missing |
-| Safe knitting | Reviewed chunks with side effects | Set `eval = FALSE` on the save and install chunks so knitting never overwrites files |
-| Numbers in the text | Compared inline values with the console output | Replaced typed numbers with inline R (`` `r nrow(sales)` ``) so they are always computed by the code |
+| What I checked | How | Result / change |
+|----------------|-----|-----------------|
+| Files on GitHub match my local files | Compared a SHA-256 checksum of every file in the repository with the local copy | All 8 files identical |
+| README renders correctly | GitHub preview; checked headings, tables, code blocks, badges and every Table of Contents link | 11 sections, 3 tables, 5 code blocks and 3 badges render; all ToC links resolve |
+| README is usable as written | Replaced the `<your-username>` placeholder in the clone command | Clone URL now points to my repository |
+| `.Rmd` knits on a fresh copy | New Posit Cloud project from the GitHub repo (R 4.6.2), installed packages, ran `rmarkdown::render()` | `sales_summary.html` created, 0 chunk errors, 11 tables, Figure 1 embedded |
+| Scripts produce the documented outputs | Ran `R/generate_synthetic_data.R` and `R/sales_summary.R` | `region_summary.csv`, `monthly_revenue.csv`, `monthly_revenue.png` created |
+| Cleaning step behaves as documented | Compared row counts before and after cleaning | 18 rows removed (3 % of 600), as designed |
+| Summary logic | Read the `summarise()` call line by line | `avg_order_value` is the mean of per-order `revenue`, not of the region total, because the total is stored under a different name (`total_revenue`) |
+| Structure vs. a real project | Compared with the tidyverse **dplyr** README | Same core order (Overview → Installation → Usage); extra sections for data and outputs suit an analysis project |
 
-The most important catch was the `summarise()` naming issue: the code would
-have run without an error but produced a wrong **average order value**. This
-showed me that "it runs" is not the same as "it is correct", and that AI
-suggestions need the same review as code from a colleague.
+The `summarise()` check taught me the most. If the total had been named
+`revenue`, the next line `mean(revenue)` would have silently averaged the
+total instead of the orders. The code would still run, but the average would
+be wrong. "It runs" is not the same as "it is correct", so AI-written code
+needs the same review as code from a colleague.
 
 ## 3. What ethical considerations apply when using AI for documentation, and how did you address them?
 
-- **Transparency.** I disclosed the tool, model, date and prompts in every file
-  (AI Assistance Declaration) and kept a full prompt log in `AI_Appendix.md`.
-  Readers can see exactly which parts were AI-assisted.
-- **Accountability.** I am responsible for every line in the repository. I did
-  not accept any output without checking it, and all results come from running
-  my R code — the AI did not compute any numbers.
+- **Transparency.** Every file starts with an AI Assistance Declaration naming
+  the tool, model and date, and `AI_Appendix.md` records the prompts, the key
+  responses and my original request to the AI. Readers can see how much of the
+  work was AI-assisted.
+- **Accountability.** I am responsible for everything in the repository. I did
+  not submit anything I had not run or previewed, and every number in the
+  documentation is computed by R at knit time — the AI did not calculate any
+  results.
 - **Privacy.** Only **synthetic** data were used. No real customer or personal
-  information was shared with the AI tool.
-- **Accuracy and over-trust.** AI text sounds confident even when it is wrong
-  (for example, the missing version requirements). I treated it as a design
-  assistant and verified claims against official documentation.
-- **Originality and learning.** Using AI to draft documentation is acceptable
-  only if I understand and can explain every section. Going forward I will use
-  AI for structure and formatting ideas, but write the project-specific
-  content myself and always keep a disclosure.
+  information was shared with the AI.
+- **Over-trust.** AI output sounds confident whether it is right or wrong. I
+  treated it as a draft and checked it with independent tools (GitHub preview,
+  Posit Cloud, checksums).
+- **Learning and originality.** The biggest risk is letting the AI do the
+  learning for me. Going forward I will write the project-specific content
+  myself, use AI mainly for structure, formatting ideas and review, and always
+  keep a disclosure.
 
 ---
 
-*Overall, AI made documentation faster and more consistent, but the quality of
-the final files depended on my verification: previewing, knitting, comparing
-with real repositories, and correcting what the AI got wrong.*
+*Overall, AI made the documentation faster and more professional, but the
+value of the final submission comes from verification: previewing on GitHub,
+knitting in Posit Cloud, comparing with real repositories, and being able to
+explain every line.*
